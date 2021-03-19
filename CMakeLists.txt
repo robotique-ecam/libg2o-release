@@ -192,68 +192,6 @@ endif(G2O_BUILD_EXAMPLES)
 option(G2O_FAST_MATH "Enable fast math operations" OFF)
 option(G2O_NO_IMPLICIT_OWNERSHIP_OF_OBJECTS "Disables memory management in the graph types, this requires the callers to manager the memory of edges and nodes" OFF)
 
-# Start of SSE* autodetect code
-# (borrowed from MRPT CMake scripts, BSD)
-option(DO_SSE_AUTODETECT "Enable autodetection of SSE* CPU sets and enable their use in optimized code" ON)
-if(NOT EXISTS "/proc/cpuinfo")
-	set(DO_SSE_AUTODETECT OFF)
-endif()
-if (DO_SSE_AUTODETECT)
-  file(READ "/proc/cpuinfo" G2O_CPU_INFO)
-endif()
-
-# Macro for each SSE* var: Invoke with name in uppercase:
-macro(DEFINE_SSE_VAR  _setname)
-	string(TOLOWER ${_setname} _set)
-	if (DO_SSE_AUTODETECT)
-		# Automatic detection:
-		set(CMAKE_G2O_HAS_${_setname} 0)
-		if (${G2O_CPU_INFO} MATCHES ".*${_set}.*")
-			set(CMAKE_G2O_HAS_${_setname} 1)
-		endif()
-	else (DO_SSE_AUTODETECT)
-		# Manual:
-		set("DISABLE_${_setname}" OFF CACHE BOOL "Forces compilation WITHOUT ${_setname} extensions")
-		mark_as_advanced("DISABLE_${_setname}")
-		set(CMAKE_G2O_HAS_${_setname} 0)
-		if (NOT DISABLE_${_setname})
-			set(CMAKE_G2O_HAS_${_setname} 1)
-		endif (NOT DISABLE_${_setname})
-	endif (DO_SSE_AUTODETECT)
-endmacro(DEFINE_SSE_VAR)
-
-# SSE optimizations:
-IF (NOT CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
-  DEFINE_SSE_VAR(SSE2)
-  DEFINE_SSE_VAR(SSE3)
-  DEFINE_SSE_VAR(SSE4_1)
-  DEFINE_SSE_VAR(SSE4_2)
-  DEFINE_SSE_VAR(SSE4_A)
-ENDIF()
-
-# Add build flags for clang AND GCC
-if (${CMAKE_CXX_COMPILER_ID} MATCHES "Clang" OR CMAKE_COMPILER_IS_GNUCXX)
-  # SSE2?
-  if (CMAKE_G2O_HAS_SSE2)
-    add_compile_options(-msse2)
-  endif()
-  # SSE3?
-  if (CMAKE_G2O_HAS_SSE3)
-    add_compile_options(-msse3 -mssse3)
-  endif()
-  # SSE4*?
-  if (CMAKE_G2O_HAS_SSE4_1)
-    add_compile_options(-msse4.1)
-  endif()
-  if (CMAKE_G2O_HAS_SSE4_2)
-    add_compile_options(-msse4.2)
-  endif()
-  if (CMAKE_G2O_HAS_SSE4_A)
-    add_compile_options(-msse4a)
-  endif()
-endif()
-# End of of SSE* autodetect code -------
-
 # Compiler specific options for gcc
 if(CMAKE_COMPILER_IS_GNUCXX)
   option (BUILD_WITH_MARCH_NATIVE "Build with \"-march native\"" OFF)
@@ -319,14 +257,6 @@ if(MSVC)
 
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
   set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
-
-  # SSE2 optimizations
-  # No need to specify if building for x64 (actually, it generates an annoying warning)
-  if (NOT MSVC_ARM)
-    if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-        add_definitions("/arch:SSE2")
-    endif()
-  endif()
 
   if (BUILD_SHARED_LIBS)
     # disable warning on missing DLL interfaces
